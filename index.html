@@ -62,18 +62,18 @@ async function FetchGoogleSheetAndSend() {
     }
 }
 
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+// self.addEventListener('fetch', (event) => {
+//   const url = new URL(event.request.url);
 
-  // 只攔截本地資源，不攔截 Google Docs 之類的外部網址
-  if (url.origin === location.origin) {
-    event.respondWith(
-      caches.match(event.request).then((response) => {
-        return response || fetch(event.request);
-      })
-    );
-  }
-});
+//   // 只攔截本地資源，不攔截 Google Docs 之類的外部網址
+//   if (url.origin === location.origin) {
+//     event.respondWith(
+//       caches.match(event.request).then((response) => {
+//         return response || fetch(event.request);
+//       })
+//     );
+//   }
+// });
 
   function isMobile() {
     return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -95,21 +95,21 @@ self.addEventListener('fetch', (event) => {
       //   }
       // });
 
-      self.addEventListener('fetch', event => {
+self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // 如果是 google 的，就不要攔截
-  if (url.hostname.includes("docs.google.com")) {
+  if (url.hostname.includes("docs.google.com") || url.pathname.includes("/TemplateData/")) {
+    // 這些不使用快取，直接重新抓
     return;
   }
 
-  // 其他照舊
   event.respondWith(
     caches.match(event.request).then(response => {
       return response || fetch(event.request);
     })
   );
 });
+
 
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
