@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>四路導引系統 v1.2</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas" width=1008 height=567 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+    </div>
+    <script>
+
+  window.onUnityCall = function (msg) {
+    console.log("Unity 調用 JS 傳來：" + msg);
+
+    if (msg === "askDeviceType") {
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      const deviceType = isMobile ? "mobile" : "desktop";
+
+      // 回呼 Unity 的 SetDeviceType 方法
+      unityInstance.SendMessage("GMM", "SetDeviceType", deviceType);
+    }
+
+    if (msg === "getData") {
+        FetchGoogleSheetAndSend();
+    }
+  };
+
+  let unityInstance = null; // 🔧 把變數拉到全域
+
+async function FetchGoogleSheetAndSend() {
+    try {
+        const url = "https://docs.google.com/spreadsheets/d/1gmmAA2ymHvIeQMpbT0g1EKeU6eNZoLIKEx-K_5AprBc/export?format=csv";
+        const response = await fetch(url);
+        const text = await response.text();
+
+        // 拆成行
+        const rows = text.split("\n");
+        // 取第一行
+        const firstRow = rows[0].split(",");
+        // 取第一欄第一筆
+        const firstValue = firstRow[0];
+
+        //console.log("First Value:", firstValue);
+
+        // 傳給 Unity (假設 Unity 物件叫 "GameManager"，方法叫 "OnReceiveCSV")
+        unityInstance.SendMessage("GMM", "GetData", firstValue);
+
+    } catch (err) {
+        console.error("Fetch failed:", err);
+    }
+}
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // 只攔截本地資源，不攔截 Google Docs 之類的外部網址
+  if (url.origin === location.origin) {
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        return response || fetch(event.request);
+      })
+    );
+  }
+});
+
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  }
+
+  function onUnityLoaded() {
+    const deviceType = isMobile() ? "mobile" : "desktop";
+    console.log("目前使用裝置：" + deviceType);
+    if (unityInstance) {
+      unityInstance.SendMessage("GMM", "SetDeviceType", deviceType);
+    } else {
+      console.warn("unityInstance 尚未準備好");
+    }
+  }
+  
+      // window.addEventListener("load", function () {
+      //   if ("serviceWorker" in navigator) {
+      //     navigator.serviceWorker.register("ServiceWorker.js");
+      //   }
+      // });
+
+      self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // 如果是 google 的，就不要攔截
+  if (url.hostname.includes("docs.google.com")) {
+    return;
+  }
+
+  // 其他照舊
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});
+
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var warningBanner = document.querySelector("#unity-warning");
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebGL Builds.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/WebGL Builds.data",
+        frameworkUrl: buildUrl + "/WebGL Builds.framework.js",
+        codeUrl: buildUrl + "/WebGL Builds.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "PredictionSystem",
+        productVersion: "0.1",
+        showBanner: unityShowBanner,
+      };
+
+      // By default Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      //config.matchWebGLToCanvasSize = false;
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+      }
+
+      loadingBar.style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          progressBarFull.style.width = 100 * progress + "%";
+        }).then((instance) => {
+          unityInstance = instance; 
+          loadingBar.style.display = "none";
+           onUnityLoaded();
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
